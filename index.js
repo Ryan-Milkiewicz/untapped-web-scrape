@@ -1,4 +1,8 @@
 import puppeteer from "puppeteer";
+import http from "http";
+import "dotenv/config";
+import { neon } from "@neondatabase/serverless";
+//import neon from "@neondatabase/serverless";
 import * as fs from "fs";
 import { setTimeout } from "node:timers/promises";
 
@@ -94,9 +98,30 @@ const UNTAPPD_URL = "https://untappd.com/user/ryan_milkiewicz/beers";
     console.log(`Total Beers Scraped: ${beers.length}`);
     fs.writeFileSync("beers.json", JSON.stringify(beers, null, 2));
     console.log("Beers saved to beers.json");
+
+    // call stored procedure to merge beer data into database
+    await importBeerData(beers);
+    console.log("Data Import Complete!");
   } catch (error) {
     console.error("Error:", error);
   } finally {
     await browser.close();
   }
 })();
+
+async function importBeerData(beers) {
+  const sql = neon(process.env.DATABASE_URL);
+
+  beers.forEach(async (beer) => {
+    try {
+      // Set statement_timeout for the current query (e.g., 30 seconds)
+      await sql`SET statement_timeout = '10000000000000'`;
+
+      // Calling the stored procedure with parameters
+      await sql`CALL merge_beer_log(${beer.name}, ${beer.brewery}, ${beer.rating}, ${beer.style}, ${beer.abv}, ${beer.totalCheckins})`;
+      console.log(`${beer.name} log merged successfully`);
+    } catch (err) {
+      console.error("Error calling the stored procedure:", err);
+    }
+  });
+}

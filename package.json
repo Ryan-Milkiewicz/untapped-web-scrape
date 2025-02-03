@@ -12,6 +12,8 @@
   "type": "module",
   "types": "module",
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "dotenv": "^16.4.7",
     "puppeteer": "^24.1.1"
   }
 }
