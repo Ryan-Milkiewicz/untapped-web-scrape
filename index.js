@@ -115,7 +115,6 @@ const UNTAPPD_URL = "https://untappd.com/user/ryan_milkiewicz/beers";
 })();
 
 async function importBeerData(beers) {
-  console.log(beers);
   const sql = neon(process.env.DATABASE_URL);
 
   // Create an array of promises for all the beer imports
