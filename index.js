@@ -91,6 +91,11 @@ const UNTAPPD_URL = "https://untappd.com/user/ryan_milkiewicz/beers";
             const match = text.match(/\d+/); // Extracts the number
             return match ? match[0] : "N/A";
           })(),
+          dtLastHad:
+            beer
+              .querySelectorAll(".details .date")[1]
+              ?.innerText.trim()
+              .split(": ")[1] || "N/A",
         })
       );
     });
@@ -101,27 +106,35 @@ const UNTAPPD_URL = "https://untappd.com/user/ryan_milkiewicz/beers";
 
     // call stored procedure to merge beer data into database
     await importBeerData(beers);
-    console.log("Data Import Complete!");
   } catch (error) {
     console.error("Error:", error);
   } finally {
     await browser.close();
+    console.log("Import Complete!");
   }
 })();
 
 async function importBeerData(beers) {
+  console.log(beers);
   const sql = neon(process.env.DATABASE_URL);
 
-  beers.forEach(async (beer) => {
-    try {
-      // Set statement_timeout for the current query (e.g., 30 seconds)
-      await sql`SET statement_timeout = '10000000000000'`;
+  // Create an array of promises for all the beer imports
+  const promises = beers.map((beer) => {
+    return (async () => {
+      try {
+        // Set statement_timeout for the current query (e.g., 60 seconds)
+        await sql`SET statement_timeout = '600000'`;
 
-      // Calling the stored procedure with parameters
-      await sql`CALL merge_beer_log(${beer.name}, ${beer.brewery}, ${beer.rating}, ${beer.style}, ${beer.abv}, ${beer.totalCheckins})`;
-      console.log(`${beer.name} log merged successfully`);
-    } catch (err) {
-      console.error("Error calling the stored procedure:", err);
-    }
+        // Calling the stored procedure with parameters
+        await sql`CALL merge_beer_log(${beer.name}, ${beer.brewery}, 
+        ${beer.rating}, ${beer.style}, ${beer.abv}, ${beer.total_checkins}, ${beer.dtLastHad})`;
+        console.log(`${beer.name} log merged successfully`);
+      } catch (err) {
+        console.error("Error calling the stored procedure:", err);
+      }
+    })();
   });
+
+  // Wait for all promises to resolve concurrently
+  await Promise.all(promises);
 }
